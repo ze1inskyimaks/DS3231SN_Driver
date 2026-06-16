@@ -21,7 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "ds_api.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -90,7 +90,8 @@ int main(void)
   MX_GPIO_Init();
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
-
+  uint8_t buffer[1] = {0};
+  //HAL_I2C_Mem_Read(&hi2c1, 0x68 << 1, 0x00, I2C_MEMADD_SIZE_8BIT, buffer, sizeof(buffer), HAL_MAX_DELAY);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -98,7 +99,15 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-
+	  ds_init(&hi2c1, 0x68 << 1);
+/*	  HAL_I2C_Mem_Read(&hi2c1, 0x68 << 1, 0x00, I2C_MEMADD_SIZE_8BIT, buffer, sizeof(buffer), HAL_MAX_DELAY);
+	  HAL_I2C_Mem_Read(&hi2c1, 0x68 << 1, 0x01, I2C_MEMADD_SIZE_8BIT, buffer, sizeof(buffer), HAL_MAX_DELAY);
+	  HAL_I2C_Mem_Read(&hi2c1, 0x68 << 1, 0x02, I2C_MEMADD_SIZE_8BIT, buffer, sizeof(buffer), HAL_MAX_DELAY);
+	  HAL_I2C_Mem_Read(&hi2c1, 0x68 << 1, 0x03, I2C_MEMADD_SIZE_8BIT, buffer, sizeof(buffer), HAL_MAX_DELAY);
+	  HAL_I2C_Mem_Read(&hi2c1, 0x68 << 1, 0x04, I2C_MEMADD_SIZE_8BIT, buffer, sizeof(buffer), HAL_MAX_DELAY);
+	  HAL_I2C_Mem_Read(&hi2c1, 0x68 << 1, 0x05, I2C_MEMADD_SIZE_8BIT, buffer, sizeof(buffer), HAL_MAX_DELAY);
+	  HAL_I2C_Mem_Read(&hi2c1, 0x68 << 1, 0x06, I2C_MEMADD_SIZE_8BIT, buffer, sizeof(buffer), HAL_MAX_DELAY);*/
+	  HAL_Delay(10000);
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
