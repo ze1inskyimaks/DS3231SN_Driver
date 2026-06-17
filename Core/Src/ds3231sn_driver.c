@@ -31,7 +31,9 @@ ds_api_status_t ds_write_time(const ds_time_data_t *const time_data){
 
 ds_api_status_t ds_read_temperature(ds_temperature_data_t *const temperature_data){
 	ds_api_status_t status = DS_API_STATUS_OK;
-
+	if (NULL == temperature_data) {
+		status = DS_API_STATUS_READ_ERROR;
+	}
 	if (!ds_data.is_device_initialized || HAL_OK != HAL_I2C_IsDeviceReady(ds_data.hi2c1, ds_data.device_address, 5, 10)) {
 		status = DS_API_STATUS_NOT_INITIALIZED;
 	}
