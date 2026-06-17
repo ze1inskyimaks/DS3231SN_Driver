@@ -100,13 +100,13 @@ int main(void)
   {
     /* USER CODE END WHILE */
 	  ds_init(&hi2c1, 0x68 << 1);
-/*	  HAL_I2C_Mem_Read(&hi2c1, 0x68 << 1, 0x00, I2C_MEMADD_SIZE_8BIT, buffer, sizeof(buffer), HAL_MAX_DELAY);
+	  HAL_I2C_Mem_Read(&hi2c1, 0x68 << 1, 0x00, I2C_MEMADD_SIZE_8BIT, buffer, sizeof(buffer), HAL_MAX_DELAY);
 	  HAL_I2C_Mem_Read(&hi2c1, 0x68 << 1, 0x01, I2C_MEMADD_SIZE_8BIT, buffer, sizeof(buffer), HAL_MAX_DELAY);
 	  HAL_I2C_Mem_Read(&hi2c1, 0x68 << 1, 0x02, I2C_MEMADD_SIZE_8BIT, buffer, sizeof(buffer), HAL_MAX_DELAY);
 	  HAL_I2C_Mem_Read(&hi2c1, 0x68 << 1, 0x03, I2C_MEMADD_SIZE_8BIT, buffer, sizeof(buffer), HAL_MAX_DELAY);
 	  HAL_I2C_Mem_Read(&hi2c1, 0x68 << 1, 0x04, I2C_MEMADD_SIZE_8BIT, buffer, sizeof(buffer), HAL_MAX_DELAY);
 	  HAL_I2C_Mem_Read(&hi2c1, 0x68 << 1, 0x05, I2C_MEMADD_SIZE_8BIT, buffer, sizeof(buffer), HAL_MAX_DELAY);
-	  HAL_I2C_Mem_Read(&hi2c1, 0x68 << 1, 0x06, I2C_MEMADD_SIZE_8BIT, buffer, sizeof(buffer), HAL_MAX_DELAY);*/
+	  HAL_I2C_Mem_Read(&hi2c1, 0x68 << 1, 0x06, I2C_MEMADD_SIZE_8BIT, buffer, sizeof(buffer), HAL_MAX_DELAY);
 	  HAL_Delay(10000);
     /* USER CODE BEGIN 3 */
   }
