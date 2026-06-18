@@ -2,6 +2,10 @@
 #include "ds_api.h"
 
 #define TEMPERATURE_ADDRESS 0x11
+#define START_TIME_ADDRESS 0x00
+#define TRIALS 5
+#define TIMEOUT 10
+
 
 typedef struct{
 	I2C_HandleTypeDef *hi2c;
@@ -15,6 +19,10 @@ static uint8_t decimal_to_bcd(const uint8_t decimal);
 
 static uint8_t hours_decimal_to_bcd_12format(const uint8_t decimal_hours);
 
+static inline bool is_valid_parameters(void *data);
+static inline bool is_device_initialized();
+
+
 ds_api_status_t ds_init(I2C_HandleTypeDef *hi2c, const uint8_t device_address){
 	ds_api_status_t status = DS_API_STATUS_OK;
 	HAL_StatusTypeDef result;
@@ -24,7 +32,7 @@ ds_api_status_t ds_init(I2C_HandleTypeDef *hi2c, const uint8_t device_address){
 	}
 
 	if(DS_API_STATUS_OK == status){
-		result = HAL_I2C_IsDeviceReady(hi2c, device_address, 5, 10);
+		result = HAL_I2C_IsDeviceReady(hi2c, device_address, TRIALS, TIMEOUT);
 
 		if(HAL_OK != result) {
 			status = DS_API_STATUS_DEVICE_NOT_FOUND;
@@ -48,16 +56,11 @@ ds_api_status_t ds_read_time(ds_time_data_t *const time_data){
 ds_api_status_t ds_write_time(const ds_time_data_t *const time_data, const bool is_24_hour_format){
 	ds_api_status_t retcode = DS_API_STATUS_OK;
 
-	if (NULL == time_data) {
+	if (!is_valid_parameters((void *)time_data)) {
 		retcode = DS_API_STATUS_INVALID_PARAMETERS;
 	}
-
-	if (DS_API_STATUS_OK == retcode && HAL_OK != HAL_I2C_IsDeviceReady(ds_data.hi2c1, ds_data.device_address, 5, 10)) {
+	if (!is_device_initialized()) {
 		retcode = DS_API_STATUS_DEVICE_NOT_FOUND;
-	}
-
-	if (DS_API_STATUS_OK == retcode && !ds_data.is_device_initialized) {
-		retcode = DS_API_STATUS_NOT_INITIALIZED;
 	}
 
 	if (DS_API_STATUS_OK == retcode) {
@@ -78,13 +81,13 @@ ds_api_status_t ds_write_time(const ds_time_data_t *const time_data, const bool 
 		write_data.year = decimal_to_bcd(time_data->year - 2000);
 
 		if (HAL_OK !=  HAL_I2C_Mem_Write(
-				ds_data.hi2c1,
+				ds_data.hi2c,
 				ds_data.device_address,
-				0x00,
+				START_TIME_ADDRESS,
 				I2C_MEMADD_SIZE_8BIT,
 				(uint8_t*)&write_data,
 				sizeof(write_data),
-				100))
+				HAL_MAX_DELAY))
 		{
 			retcode = DS_API_STATUS_WRITE_ERROR;
 		}
@@ -95,17 +98,18 @@ ds_api_status_t ds_write_time(const ds_time_data_t *const time_data, const bool 
 
 ds_api_status_t ds_read_temperature(ds_temperature_data_t *const temperature_data){
 	ds_api_status_t status = DS_API_STATUS_OK;
-	if (NULL == temperature_data) {
-		status = DS_API_STATUS_READ_ERROR;
+
+	if (!is_valid_parameters(temperature_data)) {
+		status = DS_API_STATUS_INVALID_PARAMETERS;
 	}
-	if (!ds_data.is_device_initialized || HAL_OK != HAL_I2C_IsDeviceReady(ds_data.hi2c1, ds_data.device_address, 5, 10)) {
-		status = DS_API_STATUS_NOT_INITIALIZED;
+	if (!is_device_initialized()) {
+		status = DS_API_STATUS_DEVICE_NOT_FOUND;
 	}
 
 	uint8_t buffer[2] = {0};
 
 	if (DS_API_STATUS_OK == status) {
-		if(HAL_OK != HAL_I2C_Mem_Read(ds_data.hi2c1, ds_data.device_address, TEMPERATURE_ADDRESS, I2C_MEMADD_SIZE_8BIT,
+		if(HAL_OK != HAL_I2C_Mem_Read(ds_data.hi2c, ds_data.device_address, TEMPERATURE_ADDRESS, I2C_MEMADD_SIZE_8BIT,
 				buffer, sizeof(buffer), HAL_MAX_DELAY)) {
 			status = DS_API_STATUS_READ_ERROR;
 		} else {
@@ -140,3 +144,19 @@ static uint8_t hours_decimal_to_bcd_12format(const uint8_t decimal_hours) {
 	return bcd;
 }
 
+static inline bool is_valid_parameters(void *data) {
+	bool retcode = true;
+	if (NULL == data) {
+		retcode = false;
+	}
+	return retcode;
+}
+
+static inline bool is_device_initialized() {
+	bool retcode = true;
+
+	if (!ds_data.is_device_initialized || HAL_OK != HAL_I2C_IsDeviceReady(ds_data.hi2c, ds_data.device_address, TRIALS, TIMEOUT)) {
+			retcode = false;
+		}
+	return retcode;
+}
