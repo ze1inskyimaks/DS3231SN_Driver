@@ -11,7 +11,7 @@ static ds_init_data_t ds_data = {0};
 
 static uint8_t decimal_to_bcd(const uint8_t decimal);
 
-static uint8_t hours_decimal_to_bcd_12format(const uint8_t decimal_hours)
+static uint8_t hours_decimal_to_bcd_12format(const uint8_t decimal_hours);
 
 ds_api_status_t ds_init(I2C_HandleTypeDef *hi2c1, const uint8_t device_address){
 	HAL_I2C_IsDeviceReady(hi2c1, device_address, 5, 10);
