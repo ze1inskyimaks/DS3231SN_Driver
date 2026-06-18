@@ -19,9 +19,6 @@ static uint8_t bcd_to_decimal(uint8_t bcd);
 
 static uint8_t decimal_to_bcd(const uint8_t decimal);
 
-ds_api_status_t ds_init(I2C_HandleTypeDef *hi2c1, const uint8_t device_address){
-	HAL_I2C_IsDeviceReady(hi2c1, device_address, 5, 10);
-
 static uint8_t hours_decimal_to_bcd_12format(const uint8_t decimal_hours);
 
 static inline bool is_valid_parameters(void *data);
@@ -36,7 +33,7 @@ ds_api_status_t ds_init(I2C_HandleTypeDef *hi2c, const uint8_t device_address){
 		status = DS_API_STATUS_INVALID_PARAMETERS;
 	}
 
-	if(DS_A-PI_STATUS_OK == status){
+	if(DS_API_STATUS_OK == status){
 		result = HAL_I2C_IsDeviceReady(hi2c, device_address, TRIALS, TIMEOUT);
 
 		if(HAL_OK != result) {
@@ -65,7 +62,6 @@ ds_api_status_t ds_read_time(ds_time_data_t *const time_data){
 		retcode = DS_API_STATUS_DEVICE_NOT_FOUND;
 	}
 
-	uint8_t reg_address = 0x00;
 	uint8_t buffer[7];
 
 	HAL_StatusTypeDef status;
@@ -74,11 +70,11 @@ ds_api_status_t ds_read_time(ds_time_data_t *const time_data){
 
 			ds_data.hi2c,
 			ds_data.device_address,
-			0x00,
+			START_TIME_ADDRESS,
 			I2C_MEMADD_SIZE_8BIT,
 			buffer,
 			7,
-			100);
+			HAL_MAX_DELAY);
 
 	if (status != HAL_OK)
 	{
