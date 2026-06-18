@@ -28,7 +28,7 @@ typedef struct{
 } ds_time_data_t;
 
 typedef struct{
-	uint16_t temperature;
+	float temperature;
 } ds_temperature_data_t;
 
 ds_api_status_t ds_init				(I2C_HandleTypeDef *hi2c, const uint8_t device_address);
