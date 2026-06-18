@@ -4,21 +4,37 @@
 #define TEMPERATURE_ADDRESS 0x11
 
 typedef struct{
-	I2C_HandleTypeDef *hi2c1;
+	I2C_HandleTypeDef *hi2c;
 	uint8_t device_address;
 	bool is_device_initialized;
 } ds_init_data_t;
 
 static ds_init_data_t ds_data = {0};
 
-ds_api_status_t ds_init(I2C_HandleTypeDef *hi2c1, const uint8_t device_address){
-	HAL_I2C_IsDeviceReady(hi2c1, device_address, 5, 10);
+ds_api_status_t ds_init(I2C_HandleTypeDef *hi2c, const uint8_t device_address){
+	ds_api_status_t status = DS_API_STATUS_OK;
+	HAL_StatusTypeDef result;
 
-	ds_data.hi2c1 = hi2c1;
-	ds_data.device_address = device_address;
-	ds_data.is_device_initialized = true;
+	if(NULL == hi2c || 0 == device_address || true == ds_data.is_device_initialized){
+		status = DS_API_STATUS_INVALID_PARAMETERS;
+	}
 
-	return DS_API_STATUS_OK;
+	if(DS_API_STATUS_OK == status){
+		result = HAL_I2C_IsDeviceReady(hi2c, device_address, 5, 10);
+
+		if(HAL_OK != result) {
+			status = DS_API_STATUS_DEVICE_NOT_FOUND;
+		}
+	}
+
+	if(DS_API_STATUS_OK == status)
+	{
+		ds_data.hi2c = hi2c;
+		ds_data.device_address = device_address;
+		ds_data.is_device_initialized = true;
+	}
+
+	return status;
 }
 
 ds_api_status_t ds_read_time(ds_time_data_t *const time_data){
@@ -53,4 +69,5 @@ ds_api_status_t ds_read_temperature(ds_temperature_data_t *const temperature_dat
 	}
 	return status;
 }
+
 
