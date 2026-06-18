@@ -25,7 +25,19 @@ static inline bool is_valid_parameters(void *data);
 static inline bool is_device_initialized();
 static inline bool is_time_data_valid(const ds_time_data_t *const time_data);
 
-
+/**
+ * @brief Initializes the DS3231 driver.
+ *
+ * Verifies device availability on the I2C bus and stores
+ * required driver configuration.
+ *
+ * @param[in] hi2c Pointer to I2C peripheral handle.
+ * @param[in] device_address DS3231 I2C address.
+ *
+ * @retval DS_API_STATUS_OK Driver initialized successfully.
+ * @retval DS_API_STATUS_INVALID_PARAMETERS Invalid function parameters.
+ * @retval DS_API_STATUS_DEVICE_NOT_FOUND Device is not responding.
+ */
 ds_api_status_t ds_init(I2C_HandleTypeDef *hi2c, const uint8_t device_address){
 	ds_api_status_t status = DS_API_STATUS_OK;
 	HAL_StatusTypeDef result;
@@ -52,6 +64,16 @@ ds_api_status_t ds_init(I2C_HandleTypeDef *hi2c, const uint8_t device_address){
 	return status;
 }
 
+/**
+ * @brief Reads current time and date from DS3231.
+ *
+ * @param[out] time_data Pointer to destination structure.
+ *
+ * @retval DS_API_STATUS_OK Time data read successfully.
+ * @retval DS_API_STATUS_INVALID_PARAMETERS Invalid function parameters.
+ * @retval DS_API_STATUS_DEVICE_NOT_FOUND Device is not available.
+ * @retval DS_API_STATUS_READ_ERROR Read operation failed.
+ */
 ds_api_status_t ds_read_time(ds_time_data_t *const time_data){
 	ds_api_status_t retcode = DS_API_STATUS_OK;
 
@@ -125,6 +147,19 @@ ds_api_status_t ds_read_time(ds_time_data_t *const time_data){
 	return retcode;
 }
 
+/**
+ * @brief Writes time and date to DS3231.
+ *
+ * Supports both 12-hour and 24-hour formats.
+ *
+ * @param[in] time_data Pointer to source time structure.
+ * @param[in] is_24_hour_format Time format selection.
+ *
+ * @retval DS_API_STATUS_OK Time data written successfully.
+ * @retval DS_API_STATUS_INVALID_PARAMETERS Invalid function parameters or time values.
+ * @retval DS_API_STATUS_DEVICE_NOT_FOUND Device is not available.
+ * @retval DS_API_STATUS_WRITE_ERROR Write operation failed.
+ */
 ds_api_status_t ds_write_time(const ds_time_data_t *const time_data, const bool is_24_hour_format){
 	ds_api_status_t retcode = DS_API_STATUS_OK;
 
@@ -169,6 +204,16 @@ ds_api_status_t ds_write_time(const ds_time_data_t *const time_data, const bool 
 	return retcode;
 }
 
+/**
+ * @brief Reads temperature from DS3231.
+ *
+ * @param[out] temperature_data Pointer to destination structure.
+ *
+ * @retval DS_API_STATUS_OK Temperature read successfully.
+ * @retval DS_API_STATUS_INVALID_PARAMETERS Invalid function parameters.
+ * @retval DS_API_STATUS_DEVICE_NOT_FOUND Device is not available.
+ * @retval DS_API_STATUS_READ_ERROR Read operation failed.
+ */
 ds_api_status_t ds_read_temperature(ds_temperature_data_t *const temperature_data){
 	ds_api_status_t status = DS_API_STATUS_OK;
 
@@ -195,6 +240,13 @@ ds_api_status_t ds_read_temperature(ds_temperature_data_t *const temperature_dat
 	return status;
 }
 
+/**
+ * @brief Converts decimal value to BCD.
+ *
+ * @param[in] decimal Decimal value.
+ *
+ * @return BCD representation.
+ */
 static uint8_t decimal_to_bcd(const uint8_t decimal) {
 	uint8_t bcd = 0;
 	bcd = (decimal / 10) << 4;
@@ -203,11 +255,25 @@ static uint8_t decimal_to_bcd(const uint8_t decimal) {
 	return bcd;
 }
   
+/**
+ * @brief Converts BCD value to decimal.
+ *
+ * @param[in] bcd BCD encoded value.
+ *
+ * @return Decimal representation.
+ */
 static uint8_t bcd_to_decimal(uint8_t bcd)
 {
 	return ((bcd >> 4) * 10) + (bcd & 0x0F);
 }
 
+/**
+ * @brief Converts 24-hour value to DS3231 12-hour BCD format.
+ *
+ * @param[in] decimal_hours Hour value in decimal format.
+ *
+ * @return Encoded DS3231 hour register value.
+ */
 static uint8_t hours_decimal_to_bcd_12format(const uint8_t decimal_hours) {
 	uint8_t bcd = 0;
 	bcd |= 1 << 6;
@@ -222,6 +288,13 @@ static uint8_t hours_decimal_to_bcd_12format(const uint8_t decimal_hours) {
 	return bcd;
 }
 
+/**
+ * @brief Checks pointer validity.
+ *
+ * @param[in] data Pointer to validate.
+ *
+ * @return true if pointer is valid, otherwise false.
+ */
 static inline bool is_valid_parameters(void *data) {
 	bool retcode = true;
 	if (NULL == data) {
@@ -230,6 +303,11 @@ static inline bool is_valid_parameters(void *data) {
 	return retcode;
 }
 
+/**
+ * @brief Checks driver initialization state and device availability.
+ *
+ * @return true if driver is initialized and device responds on I2C bus.
+ */
 static inline bool is_device_initialized() {
 	bool retcode = true;
 
@@ -239,6 +317,13 @@ static inline bool is_device_initialized() {
 	return retcode;
 }
 
+/**
+ * @brief Validates time and date values.
+ *
+ * @param[in] time_data Pointer to time structure.
+ *
+ * @return true if all values are within valid ranges.
+ */
 static inline bool is_time_data_valid(const ds_time_data_t *const time_data) {
 	bool result = true;
 
