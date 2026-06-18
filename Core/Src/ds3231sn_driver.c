@@ -36,7 +36,7 @@ ds_api_status_t ds_init(I2C_HandleTypeDef *hi2c, const uint8_t device_address){
 		status = DS_API_STATUS_INVALID_PARAMETERS;
 	}
 
-	if(DS_API_STATUS_OK == status){
+	if(DS_A-PI_STATUS_OK == status){
 		result = HAL_I2C_IsDeviceReady(hi2c, device_address, TRIALS, TIMEOUT);
 
 		if(HAL_OK != result) {
@@ -55,15 +55,14 @@ ds_api_status_t ds_init(I2C_HandleTypeDef *hi2c, const uint8_t device_address){
 }
 
 ds_api_status_t ds_read_time(ds_time_data_t *const time_data){
+	ds_api_status_t retcode = DS_API_STATUS_OK;
 
-	if (time_data == NULL)
-	{
-		return DS_API_STATUS_INVALID_PARAMETERS;
+	if (!is_valid_parameters((void *)time_data)) {
+		retcode = DS_API_STATUS_INVALID_PARAMETERS;
 	}
 
-	if (!ds_data.is_device_initialized)
-	{
-		return DS_API_STATUS_NOT_INITIALIZED;
+	if (!is_device_initialized()) {
+		retcode = DS_API_STATUS_DEVICE_NOT_FOUND;
 	}
 
 	uint8_t reg_address = 0x00;
@@ -71,28 +70,19 @@ ds_api_status_t ds_read_time(ds_time_data_t *const time_data){
 
 	HAL_StatusTypeDef status;
 
-	status = HAL_I2C_Master_Transmit(
-			ds_data.hi2c1,
-			ds_data.device_address,
-			&reg_address,
-			1,
-			100);
+	status = HAL_I2C_Mem_Read(
 
-	if (status != HAL_OK)
-	{
-		return DS_API_STATUS_READ_ERROR;
-	}
-
-	status = HAL_I2C_Master_Receive(
-			ds_data.hi2c1,
+			ds_data.hi2c,
 			ds_data.device_address,
+			0x00,
+			I2C_MEMADD_SIZE_8BIT,
 			buffer,
 			7,
 			100);
 
 	if (status != HAL_OK)
 	{
-		return DS_API_STATUS_READ_ERROR;
+		retcode = DS_API_STATUS_READ_ERROR;
 	}
 
 
@@ -133,7 +123,9 @@ ds_api_status_t ds_read_time(ds_time_data_t *const time_data){
 
 	time_data->year = 2000 + bcd_to_decimal(buffer[6]);
 
-	return DS_API_STATUS_OK;
+	retcode = DS_API_STATUS_OK;
+
+	return retcode;
 }
 
 ds_api_status_t ds_write_time(const ds_time_data_t *const time_data, const bool is_24_hour_format){
