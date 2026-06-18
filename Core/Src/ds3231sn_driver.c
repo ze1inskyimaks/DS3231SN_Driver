@@ -23,6 +23,7 @@ static uint8_t hours_decimal_to_bcd_12format(const uint8_t decimal_hours);
 
 static inline bool is_valid_parameters(void *data);
 static inline bool is_device_initialized();
+static inline bool is_time_data_valid(const ds_time_data_t *const time_data);
 
 
 ds_api_status_t ds_init(I2C_HandleTypeDef *hi2c, const uint8_t device_address){
@@ -127,9 +128,10 @@ ds_api_status_t ds_read_time(ds_time_data_t *const time_data){
 ds_api_status_t ds_write_time(const ds_time_data_t *const time_data, const bool is_24_hour_format){
 	ds_api_status_t retcode = DS_API_STATUS_OK;
 
-	if (!is_valid_parameters((void *)time_data)) {
+	if (!is_valid_parameters((void *)time_data) || !is_time_data_valid(time_data)) {
 		retcode = DS_API_STATUS_INVALID_PARAMETERS;
 	}
+
 	if (!is_device_initialized()) {
 		retcode = DS_API_STATUS_DEVICE_NOT_FOUND;
 	}
@@ -235,4 +237,21 @@ static inline bool is_device_initialized() {
 			retcode = false;
 		}
 	return retcode;
+}
+
+static inline bool is_time_data_valid(const ds_time_data_t *const time_data) {
+	bool result = true;
+
+	if (	   time_data->seconds > 59
+			|| time_data->minutes > 59
+			|| time_data->hours > 23
+			|| time_data->day_of_week > 7
+			|| time_data->day > 31
+			|| time_data->month > 12
+			|| time_data->year > 2099)
+	{
+		result = false;
+	}
+
+	return result;
 }
