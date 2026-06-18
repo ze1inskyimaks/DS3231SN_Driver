@@ -67,7 +67,30 @@ ds_api_status_t ds_read_time(ds_time_data_t *const time_data){
 
 	time_data->minutes = bcd_to_decimal(buffer[1]);
 
-	time_data->hours = bcd_to_decimal(buffer[2] & 0x3F);
+	uint8_t raw_hours = buffer[2];
+
+	if (raw_hours & (1 << 6))
+	{
+	    uint8_t hour = raw_hours & 0x1F;
+	    hour = bcd_to_decimal(hour);
+
+	    bool is_pm = raw_hours & (1 << 5);
+
+	    if (is_pm && hour != 12)
+	    {
+	        hour += 12;
+	    }
+	    else if (!is_pm && hour == 12)
+	    {
+	        hour = 0;
+	    }
+
+	    time_data->hours = hour;
+	}
+	else
+	{
+	    time_data->hours = bcd_to_decimal(raw_hours & 0x3F);
+	}
 
 	time_data->day_of_week = bcd_to_decimal(buffer[3]);
 
