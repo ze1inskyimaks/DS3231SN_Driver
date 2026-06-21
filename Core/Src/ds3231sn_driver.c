@@ -5,6 +5,8 @@
 #define START_TIME_ADDRESS 0x00
 #define TRIALS 5
 #define TIMEOUT 10
+#define HOURS_FORMAT_BIT (1 << 6)
+#define HOURS_AM_PM_BIT (1 << 5)
 
 
 typedef struct{
@@ -19,11 +21,16 @@ static uint8_t bcd_to_decimal(uint8_t bcd);
 
 static uint8_t decimal_to_bcd(const uint8_t decimal);
 
-static uint8_t hours_decimal_to_bcd_12format(const uint8_t decimal_hours);
+static uint8_t hours_decimal_to_bcd(const uint8_t decimal_hours, const bool is_24_hour_format);
+
+static void convert_time_data_to_bcd(const ds_time_data_t *const orig_data,
+									 ds_time_data_t *const converted_data,
+									 const bool is_24_hour_format);
 
 static inline bool is_valid_parameters(void *data);
 static inline bool is_device_initialized();
 static inline bool is_time_data_valid(const ds_time_data_t *const time_data);
+static inline bool is_day_of_month_valid(uint8_t day, uint8_t month, uint16_t year);
 
 /**
  * @brief Initializes the DS3231 driver.
@@ -174,19 +181,7 @@ ds_api_status_t ds_write_time(const ds_time_data_t *const time_data, const bool 
 	if (DS_API_STATUS_OK == retcode) {
 		ds_time_data_t write_data = {0};
 
-		write_data.seconds = decimal_to_bcd(time_data->seconds);
-		write_data.minutes = decimal_to_bcd(time_data->minutes);
-
-		if (is_24_hour_format) {
-			write_data.hours = decimal_to_bcd(time_data->hours);
-		} else {
-			write_data.hours = hours_decimal_to_bcd_12format(time_data->hours);
-		}
-
-		write_data.day_of_week = decimal_to_bcd(time_data->day_of_week);
-		write_data.day = decimal_to_bcd(time_data->day);
-		write_data.month = decimal_to_bcd(time_data->month);
-		write_data.year = decimal_to_bcd(time_data->year - 2000);
+		convert_time_data_to_bcd(time_data, &write_data, is_24_hour_format);
 
 		if (HAL_OK !=  HAL_I2C_Mem_Write(
 				ds_data.hi2c,
@@ -274,18 +269,36 @@ static uint8_t bcd_to_decimal(uint8_t bcd)
  *
  * @return Encoded DS3231 hour register value.
  */
-static uint8_t hours_decimal_to_bcd_12format(const uint8_t decimal_hours) {
+static uint8_t hours_decimal_to_bcd(const uint8_t decimal_hours, const bool is_24_hour_format) {
 	uint8_t bcd = 0;
-	bcd |= 1 << 6;
 
-	if (decimal_hours > 12) {
-		bcd |= 1 << 5;
-		bcd |= decimal_to_bcd(decimal_hours - 12);
+	if (is_24_hour_format) {
+		bcd = decimal_to_bcd(decimal_hours);
 	} else {
-		bcd |= decimal_to_bcd(decimal_hours);
+		bcd |= HOURS_FORMAT_BIT;
+
+		if (decimal_hours > 12) {
+			bcd |= HOURS_AM_PM_BIT;
+			bcd |= decimal_to_bcd(decimal_hours - 12);
+		} else {
+			bcd |= decimal_to_bcd(decimal_hours);
+		}
 	}
 
 	return bcd;
+}
+
+static void convert_time_data_to_bcd(const ds_time_data_t *const orig_data,
+									 ds_time_data_t *const converted_data,
+									 const bool is_24_hour_format)
+{
+	converted_data->seconds = decimal_to_bcd(orig_data->seconds);
+	converted_data->minutes = decimal_to_bcd(orig_data->minutes);
+	converted_data->hours = hours_decimal_to_bcd(orig_data->hours, is_24_hour_format);
+	converted_data->day_of_week = decimal_to_bcd(orig_data->day_of_week);
+	converted_data->day = decimal_to_bcd(orig_data->day);
+	converted_data->month = decimal_to_bcd(orig_data->month);
+	converted_data->year = decimal_to_bcd(orig_data->year - 2000);
 }
 
 /**
@@ -325,17 +338,58 @@ static inline bool is_device_initialized() {
  * @return true if all values are within valid ranges.
  */
 static inline bool is_time_data_valid(const ds_time_data_t *const time_data) {
+	bool result =  !(  time_data->seconds > 59
+					|| time_data->minutes > 59
+					|| time_data->hours > 23
+					|| time_data->day_of_week > 7
+					|| time_data->month > 12
+					|| time_data->year > 2199
+					|| !is_day_of_month_valid(time_data->day, time_data->month, time_data->year));
+
+	return result;
+}
+
+static inline bool is_day_of_month_valid(uint8_t day, uint8_t month, uint16_t year) {
 	bool result = true;
 
-	if (	   time_data->seconds > 59
-			|| time_data->minutes > 59
-			|| time_data->hours > 23
-			|| time_data->day_of_week > 7
-			|| time_data->day > 31
-			|| time_data->month > 12
-			|| time_data->year > 2099)
-	{
-		result = false;
+	switch(month) {
+		case 1:
+		case 3:
+		case 5:
+		case 7:
+		case 8:
+		case 10:
+		case 12:
+		{
+			if (day > 31) {
+				result = false;
+			}
+			break;
+		}
+
+		case 2: {
+			if ((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)) {
+				if (day > 29) {
+					result = false;
+				}
+			} else {
+				if (day > 28) {
+					result = false;
+				}
+			}
+			break;
+		}
+
+		case 4:
+		case 6:
+		case 9:
+		case 11:
+		{
+			if (day > 30) {
+				result = false;
+			}
+			break;
+		}
 	}
 
 	return result;
