@@ -232,7 +232,7 @@ ds_api_status_t ds_read_temperature(ds_temperature_data_t *const temperature_dat
 			status = DS_API_STATUS_READ_ERROR;
 		} else {
 			int16_t temp_raw = (int16_t)((buffer[0] << 8) | buffer[1]);
-			temperature_data->temperature = (temp_raw >> 6) * 0.25;
+			temperature_data->temperature_x100 = (temp_raw * 25) >> 6;
 			status = DS_API_STATUS_OK;
 		}
 

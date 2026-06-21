@@ -92,7 +92,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
   ds_init(&hi2c1, 0x68 << 1);
   ds_temperature_data_t temp = {
-		  .temperature = 0.0
+		  .temperature_x100 = 0
   };
   /* USER CODE END 2 */
 

@@ -36,7 +36,7 @@ typedef struct{
  * @brief Temperature measurement data.
  */
 typedef struct{
-	float temperature;
+	int16_t temperature_x100;
 } ds_temperature_data_t;
 
 ds_api_status_t ds_init				(I2C_HandleTypeDef *hi2c, const uint8_t device_address);
