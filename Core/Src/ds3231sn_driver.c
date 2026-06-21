@@ -214,10 +214,10 @@ ds_api_status_t ds_write_time(const ds_time_data_t *const time_data, const bool 
  * @retval DS_API_STATUS_DEVICE_NOT_FOUND Device is not available.
  * @retval DS_API_STATUS_READ_ERROR Read operation failed.
  */
-ds_api_status_t ds_read_temperature(ds_temperature_data_t *const temperature_data){
+ds_api_status_t ds_read_temperature(int16_t *const temperature_x100){
 	ds_api_status_t status = DS_API_STATUS_OK;
 
-	if (!is_valid_parameters(temperature_data)) {
+	if (!is_valid_parameters(temperature_x100)) {
 		status = DS_API_STATUS_INVALID_PARAMETERS;
 	}
 	if (!is_device_initialized()) {
@@ -232,7 +232,7 @@ ds_api_status_t ds_read_temperature(ds_temperature_data_t *const temperature_dat
 			status = DS_API_STATUS_READ_ERROR;
 		} else {
 			int16_t temp_raw = (int16_t)((buffer[0] << 8) | buffer[1]);
-			temperature_data->temperature_x100 = (temp_raw * 25) >> 6;
+			*temperature_x100 = (temp_raw * 25) >> 6;
 			status = DS_API_STATUS_OK;
 		}
 

@@ -91,9 +91,7 @@ int main(void)
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
   ds_init(&hi2c1, 0x68 << 1);
-  ds_temperature_data_t temp = {
-		  .temperature_x100 = 0
-  };
+  int16_t temperature_x100 = 0;
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -101,7 +99,7 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-	  ds_read_temperature(&temp);
+	  ds_read_temperature(&temperature_x100);
 	  HAL_Delay(1000);
     /* USER CODE BEGIN 3 */
   }
