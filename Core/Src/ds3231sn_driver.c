@@ -221,7 +221,7 @@ ds_api_status_t ds_read_temperature(int16_t *const temperature_x100){
 		status = DS_API_STATUS_INVALID_PARAMETERS;
 	}
 	if (!is_device_initialized()) {
-		status = DS_API_STATUS_DEVICE_NOT_FOUND;
+		status = DS_API_STATUS_NOT_INITIALIZED;
 	}
 
 	uint8_t buffer[2] = {0};
