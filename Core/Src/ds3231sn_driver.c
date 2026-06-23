@@ -13,6 +13,7 @@
 #define CONTROL_EOSC_BIT (1 << 7)
 #define OSF_BIT (1 << 7)
 #define CENTURY_BIT (1 << 7)
+#define TIME_FORMAT_BIT (1 << 6)
 
 
 typedef struct{
@@ -209,7 +210,7 @@ ds_api_status_t ds_read_time(ds_time_data_t *const time_data){
 
 	uint8_t raw_hours = buffer[2];
 
-	if (raw_hours & (1 << 6))
+	if (raw_hours & TIME_FORMAT_BIT)
 	{
 	    uint8_t hour = raw_hours & 0x1F;
 	    hour = bcd_to_decimal(hour);
