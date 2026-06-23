@@ -11,6 +11,8 @@
 #define HOURS_AM_PM_BIT_INDEX 5
 #define CENTURY_BIT_INDEX 7
 #define CONTROL_EOSC_BIT (1 << 7)
+#define OSF_BIT (1 << 7)
+#define CENTURY_BIT (1 << 7)
 
 
 typedef struct{
@@ -233,11 +235,11 @@ ds_api_status_t ds_read_time(ds_time_data_t *const time_data){
 	time_data->day_of_week = bcd_to_decimal(buffer[3]);
 
 	time_data->day = bcd_to_decimal(buffer[4]);
-  
+  -
 	uint8_t raw_month = buffer[5];
 	uint8_t raw_year  = buffer[6];
 
-	bool century = raw_month & (1 << 7);
+	bool century = raw_month & CENTURY_BIT;
 	uint8_t month = bcd_to_decimal(raw_month & 0x1F);
 	uint8_t year  = bcd_to_decimal(raw_year);
 
@@ -431,7 +433,7 @@ static ds_api_status_t ds_check_oscillator(void)
         return DS_API_STATUS_READ_ERROR;
     }
 
-    if (status_register & (1 << 7))
+    if (status_register & OSF_BIT)
     {
         return DS_API_STATUS_OSCILLATOR_STOPPED;
     }
