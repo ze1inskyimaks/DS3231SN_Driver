@@ -7,6 +7,9 @@
 #define START_TIME_ADDRESS 0x00
 #define TRIALS 5
 #define TIMEOUT 10
+#define HOURS_FORMAT_BIT_INDEX 6
+#define HOURS_AM_PM_BIT_INDEX 5
+#define CENTURY_BIT_INDEX 7
 #define CONTROL_EOSC_BIT (1 << 7)
 
 
@@ -22,11 +25,83 @@ static uint8_t bcd_to_decimal(uint8_t bcd);
 
 static uint8_t decimal_to_bcd(const uint8_t decimal);
 
-static uint8_t hours_decimal_to_bcd_12format(const uint8_t decimal_hours);
+static uint8_t hours_decimal_to_bcd(const uint8_t decimal_hours, const bool is_24_hour_format);
 
-static inline bool is_valid_parameters(void *data);
-static inline bool is_device_initialized();
-static inline bool is_time_data_valid(const ds_time_data_t *const time_data);
+static void convert_time_data_to_bcd(const ds_time_data_t *const orig_data,
+									 uint8_t *const converted_data,
+									 const bool is_24_hour_format);
+
+/**
+ * @brief Checks pointer validity.
+ *
+ * @param[in] data Pointer to validate.
+ *
+ * @return true if pointer is valid, otherwise false.
+ */
+static inline bool is_valid_parameters(void *data) {
+	return NULL != data;
+}
+
+/**
+ * @brief Checks driver initialization state and device availability.
+ *
+ * @return true if driver is initialized and device responds on I2C bus.
+ */
+static inline bool is_device_initialized() {
+	bool retcode = true;
+
+	if (!ds_data.is_device_initialized || HAL_OK != HAL_I2C_IsDeviceReady(ds_data.hi2c, ds_data.device_address, TRIALS, TIMEOUT)) {
+			retcode = false;
+		}
+	return retcode;
+}
+
+
+/**
+ * @brief Validates if a given day is valid for a specific month and year.
+ *
+ * This function checks if the day falls within the valid range for the specified
+ * month, including full Gregorian calendar leap year calculations for February.
+ *
+ * @param day   The day of the month to validate (e.g., 1 to 31).
+ * @param month The month of the year (1 for January to 12 for December).
+ * @param year  The full 4-digit year (e.g., 2024, 2026).
+ * * @return true if the day is valid for the given month and year.
+ * @return false if the day exceeds the maximum days in that month.
+ */
+static inline bool is_day_of_month_valid(uint8_t day, uint8_t month, uint16_t year) {
+	bool result = true;
+	const bool is_leap_year = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+	const uint8_t months_duration[12] = {31, 28 + (is_leap_year ? 1 : 0), 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+
+	if (day > months_duration[month - 1]) {
+		result = false;
+	}
+
+	return result;
+}
+
+/**
+ * @brief Validates time and date values.
+ *
+ * @param[in] time_data Pointer to time structure.
+ *
+ * @return true if all values are within valid ranges.
+ */
+static inline bool is_time_data_valid(const ds_time_data_t *const time_data) {
+	const bool result =  !(  time_data->seconds > 59
+					|| time_data->minutes > 59
+					|| time_data->hours > 23
+					|| time_data->day_of_week > 7
+					|| time_data->day_of_week < 1
+					|| time_data->month > 12
+					|| time_data->month < 1
+					|| time_data->year > 2199
+					|| time_data->year < 2000
+					|| !is_day_of_month_valid(time_data->day, time_data->month, time_data->year));
+
+	return result;
+}
 
 /**
  * @brief Initializes the DS3231 driver.
@@ -176,7 +251,7 @@ ds_api_status_t ds_read_time(ds_time_data_t *const time_data){
  *
  * @retval DS_API_STATUS_OK Time data written successfully.
  * @retval DS_API_STATUS_INVALID_PARAMETERS Invalid function parameters or time values.
- * @retval DS_API_STATUS_DEVICE_NOT_FOUND Device is not available.
+ * @retval DS_API_STATUS_NOT_INITIALIZED Device is not available.
  * @retval DS_API_STATUS_WRITE_ERROR Write operation failed.
  */
 ds_api_status_t ds_write_time(const ds_time_data_t *const time_data, const bool is_24_hour_format){
@@ -187,32 +262,20 @@ ds_api_status_t ds_write_time(const ds_time_data_t *const time_data, const bool 
 	}
 
 	if (!is_device_initialized()) {
-		retcode = DS_API_STATUS_DEVICE_NOT_FOUND;
+		retcode = DS_API_STATUS_NOT_INITIALIZED;
 	}
 
 	if (DS_API_STATUS_OK == retcode) {
-		ds_time_data_t write_data = {0};
+		uint8_t write_data[7] = {0};
 
-		write_data.seconds = decimal_to_bcd(time_data->seconds);
-		write_data.minutes = decimal_to_bcd(time_data->minutes);
-
-		if (is_24_hour_format) {
-			write_data.hours = decimal_to_bcd(time_data->hours);
-		} else {
-			write_data.hours = hours_decimal_to_bcd_12format(time_data->hours);
-		}
-
-		write_data.day_of_week = decimal_to_bcd(time_data->day_of_week);
-		write_data.day = decimal_to_bcd(time_data->day);
-		write_data.month = decimal_to_bcd(time_data->month);
-		write_data.year = decimal_to_bcd(time_data->year - 2000);
+		convert_time_data_to_bcd(time_data, write_data, is_24_hour_format);
 
 		if (HAL_OK !=  HAL_I2C_Mem_Write(
 				ds_data.hi2c,
 				ds_data.device_address,
 				START_TIME_ADDRESS,
 				MEMADD_SIZE,
-				(uint8_t*)&write_data,
+				write_data,
 				sizeof(write_data),
 				HAL_MAX_DELAY))
 		{
@@ -293,69 +356,50 @@ static uint8_t bcd_to_decimal(uint8_t bcd)
  *
  * @return Encoded DS3231 hour register value.
  */
-static uint8_t hours_decimal_to_bcd_12format(const uint8_t decimal_hours) {
+static uint8_t hours_decimal_to_bcd(const uint8_t decimal_hours, const bool is_24_hour_format) {
 	uint8_t bcd = 0;
-	bcd |= 1 << 6;
 
-	if (decimal_hours > 12) {
-		bcd |= 1 << 5;
-		bcd |= decimal_to_bcd(decimal_hours - 12);
+	if (is_24_hour_format) {
+		bcd = decimal_to_bcd(decimal_hours);
 	} else {
-		bcd |= decimal_to_bcd(decimal_hours);
+		bcd |= 1 << HOURS_FORMAT_BIT_INDEX;  //set 12-hours format
+
+		if (decimal_hours > 12) {
+			bcd |= 1 << HOURS_AM_PM_BIT_INDEX;  // set PM
+			bcd |= decimal_to_bcd(decimal_hours - 12);
+		} else {
+			bcd |= decimal_to_bcd(decimal_hours);
+		}
 	}
 
 	return bcd;
 }
 
+
 /**
- * @brief Checks pointer validity.
+ * @brief Converts a complete time structure from decimal to Binary-Coded Decimal (BCD).
  *
- * @param[in] data Pointer to validate.
+ * This function safely translates human-readable decimal time values into the raw
+ * BCD format required by the DS3231 RTC hardware registers. It calculates the
+ * 2-digit year offset based on the current century (relative to 2000 or 2100).
  *
- * @return true if pointer is valid, otherwise false.
+ * @param orig_data         Pointer to the input structure containing standard decimal time.
+ * @param converted_data            Pointer to the 7-byte output array mapping to DS3231 registers.
+ * @param is_24_hour_format Set to true for 24-hour mode, false for 12-hour (AM/PM) mode.
  */
-static inline bool is_valid_parameters(void *data) {
-	bool retcode = true;
-	if (NULL == data) {
-		retcode = false;
+static void convert_time_data_to_bcd(const ds_time_data_t *const orig_data,
+									 uint8_t *const converted_data,
+									 const bool is_24_hour_format)
+{
+	converted_data[0] = decimal_to_bcd(orig_data->seconds);
+	converted_data[1] = decimal_to_bcd(orig_data->minutes);
+	converted_data[2] = hours_decimal_to_bcd(orig_data->hours, is_24_hour_format);
+	converted_data[3] = decimal_to_bcd(orig_data->day_of_week);
+	converted_data[4] = decimal_to_bcd(orig_data->day);
+	converted_data[5] = decimal_to_bcd(orig_data->month);
+	converted_data[6] = decimal_to_bcd(orig_data->year - (orig_data->year >= 2100 ? 2100 : 2000));
+
+	if (orig_data->year >= 2100) {
+		converted_data[5] |= 1 << CENTURY_BIT_INDEX;
 	}
-	return retcode;
-}
-
-/**
- * @brief Checks driver initialization state and device availability.
- *
- * @return true if driver is initialized and device responds on I2C bus.
- */
-static inline bool is_device_initialized() {
-	bool retcode = true;
-
-	if (!ds_data.is_device_initialized || HAL_OK != HAL_I2C_IsDeviceReady(ds_data.hi2c, ds_data.device_address, TRIALS, TIMEOUT)) {
-			retcode = false;
-		}
-	return retcode;
-}
-
-/**
- * @brief Validates time and date values.
- *
- * @param[in] time_data Pointer to time structure.
- *
- * @return true if all values are within valid ranges.
- */
-static inline bool is_time_data_valid(const ds_time_data_t *const time_data) {
-	bool result = true;
-
-	if (	   time_data->seconds > 59
-			|| time_data->minutes > 59
-			|| time_data->hours > 23
-			|| time_data->day_of_week > 7
-			|| time_data->day > 31
-			|| time_data->month > 12
-			|| time_data->year > 2099)
-	{
-		result = false;
-	}
-
-	return result;
 }
