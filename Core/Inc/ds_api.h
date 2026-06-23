@@ -14,6 +14,7 @@ typedef enum
 	DS_API_STATUS_DEVICE_NOT_FOUND,     /** Device is not responding on the I2C bus. */
 	DS_API_STATUS_WRITE_ERROR,          /** Write operation failed. */
 	DS_API_STATUS_READ_ERROR,           /** Read operation failed. */
+  DS_API_STATUS_OSCILLATOR_STOPPED,   /** Oscillator stopped. */
 	DS_API_STATUS_INVALID_PARAMETERS    /** Invalid function parameters. */
 } ds_api_status_t;
 

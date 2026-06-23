@@ -11,6 +11,8 @@
 #define HOURS_AM_PM_BIT_INDEX 5
 #define CENTURY_BIT_INDEX 7
 #define CONTROL_EOSC_BIT (1 << 7)
+#define OSF_BIT (1 << 7)
+#define CENTURY_BIT (1 << 7)
 
 
 typedef struct{
@@ -26,6 +28,8 @@ static uint8_t bcd_to_decimal(uint8_t bcd);
 static uint8_t decimal_to_bcd(const uint8_t decimal);
 
 static uint8_t hours_decimal_to_bcd(const uint8_t decimal_hours, const bool is_24_hour_format);
+
+static ds_api_status_t ds_check_oscillator(void);
 
 static void convert_time_data_to_bcd(const ds_time_data_t *const orig_data,
 									 uint8_t *const converted_data,
@@ -231,12 +235,22 @@ ds_api_status_t ds_read_time(ds_time_data_t *const time_data){
 	time_data->day_of_week = bcd_to_decimal(buffer[3]);
 
 	time_data->day = bcd_to_decimal(buffer[4]);
+  -
+	uint8_t raw_month = buffer[5];
+	uint8_t raw_year  = buffer[6];
 
-	time_data->month = bcd_to_decimal(buffer[5] & 0x1F);
+	bool century = raw_month & CENTURY_BIT;
+	uint8_t month = bcd_to_decimal(raw_month & 0x1F);
+	uint8_t year  = bcd_to_decimal(raw_year);
 
-	time_data->year = 2000 + bcd_to_decimal(buffer[6]);
+	time_data->month = month;
 
-	retcode = DS_API_STATUS_OK;
+	time_data->year = (century ? 2100 : 2000) + year;
+
+	if (DS_API_STATUS_OK == retcode)
+	{
+		retcode = ds_check_oscillator();
+	}
 
 	return retcode;
 }
@@ -320,7 +334,6 @@ ds_api_status_t ds_read_temperature(int16_t *const temperature_x100){
 
 	}
 	return status;
-}
 
 /**
  * @brief Converts decimal value to BCD.
@@ -402,4 +415,28 @@ static void convert_time_data_to_bcd(const ds_time_data_t *const orig_data,
 	if (orig_data->year >= 2100) {
 		converted_data[5] |= 1 << CENTURY_BIT_INDEX;
 	}
+}
+
+static ds_api_status_t ds_check_oscillator(void)
+{
+    uint8_t status_register;
+
+    if (HAL_OK != HAL_I2C_Mem_Read(
+            ds_data.hi2c,
+            ds_data.device_address,
+            0x0F,
+            I2C_MEMADD_SIZE_8BIT,
+            &status_register,
+            1,
+            HAL_MAX_DELAY))
+    {
+        return DS_API_STATUS_READ_ERROR;
+    }
+
+    if (status_register & OSF_BIT)
+    {
+        return DS_API_STATUS_OSCILLATOR_STOPPED;
+    }
+
+    return DS_API_STATUS_OK;
 }
