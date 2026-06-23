@@ -194,7 +194,7 @@ ds_api_status_t ds_read_time(ds_time_data_t *const time_data){
 			START_TIME_ADDRESS,
 			MEMADD_SIZE,
 			buffer,
-			7,
+			sizeof(buffer),
 			HAL_MAX_DELAY);
 
 	if (status != HAL_OK)
@@ -235,7 +235,7 @@ ds_api_status_t ds_read_time(ds_time_data_t *const time_data){
 	time_data->day_of_week = bcd_to_decimal(buffer[3]);
 
 	time_data->day = bcd_to_decimal(buffer[4]);
-  -
+
 	uint8_t raw_month = buffer[5];
 	uint8_t raw_year  = buffer[6];
 
@@ -334,7 +334,7 @@ ds_api_status_t ds_read_temperature(int16_t *const temperature_x100){
 
 	}
 	return status;
-
+}
 /**
  * @brief Converts decimal value to BCD.
  *

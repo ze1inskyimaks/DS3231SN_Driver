@@ -92,6 +92,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
   ds_init(&hi2c1, 0x68 << 1);
   int16_t temperature_x100 = 0;
+  ds_time_data_t time_data= {0};
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -100,6 +101,7 @@ int main(void)
   {
     /* USER CODE END WHILE */
 	  ds_read_temperature(&temperature_x100);
+	  ds_read_time(&time_data);
 	  HAL_Delay(1000);
     /* USER CODE BEGIN 3 */
   }
