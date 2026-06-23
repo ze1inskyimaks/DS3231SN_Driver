@@ -32,6 +32,8 @@ static uint8_t hours_decimal_to_bcd(const uint8_t decimal_hours, const bool is_2
 
 static ds_api_status_t ds_check_oscillator(void);
 
+static uint8_t ds_decode_hours(const uint8_t raw_hours);
+
 static void convert_time_data_to_bcd(const ds_time_data_t *const orig_data,
 									 uint8_t *const converted_data,
 									 const bool is_24_hour_format);
@@ -208,30 +210,7 @@ ds_api_status_t ds_read_time(ds_time_data_t *const time_data){
 
 	time_data->minutes = bcd_to_decimal(buffer[1]);
 
-	uint8_t raw_hours = buffer[2];
-
-	if (raw_hours & TIME_FORMAT_BIT)
-	{
-	    uint8_t hour = raw_hours & 0x1F;
-	    hour = bcd_to_decimal(hour);
-
-	    bool is_pm = raw_hours & (1 << 5);
-
-	    if (is_pm && hour != 12)
-	    {
-	        hour += 12;
-	    }
-	    else if (!is_pm && hour == 12)
-	    {
-	        hour = 0;
-	    }
-
-	    time_data->hours = hour;
-	}
-	else
-	{
-	    time_data->hours = bcd_to_decimal(raw_hours & 0x3F);
-	}
+	time_data->hours = ds_decode_hours(buffer[2]);
 
 	time_data->day_of_week = bcd_to_decimal(buffer[3]);
 
@@ -440,4 +419,31 @@ static ds_api_status_t ds_check_oscillator(void)
     }
 
     return DS_API_STATUS_OK;
+}
+
+static uint8_t ds_decode_hours(const uint8_t raw_hours)
+{
+	uint8_t hours;
+
+	if (raw_hours & DS3231_HOURS_12_24_BIT)
+	{
+		hours = bcd_to_decimal(raw_hours & 0x1F);
+
+		bool is_pm = raw_hours & DS3231_HOURS_AM_PM_BIT;
+
+		if (is_pm && hours != 12)
+		{
+			hours += 12;
+		}
+		else if (!is_pm && hours == 12)
+		{
+			hours = 0;
+		}
+	}
+	else
+	{
+		hours = bcd_to_decimal(raw_hours & 0x3F);
+	}
+
+	return hours;
 }
