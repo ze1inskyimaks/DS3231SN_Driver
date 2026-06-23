@@ -68,10 +68,10 @@ static inline bool is_device_initialized() {
  */
 static inline bool is_day_of_month_valid(uint8_t day, uint8_t month, uint16_t year) {
 	bool result = true;
-	const uint8_t months_duration[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 	const bool is_leap_year = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+	const uint8_t months_duration[12] = {31, 28 + (is_leap_year ? 1 : 0), 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
-	if (day > months_duration[month - 1] + (2 == month && is_leap_year ? 1 : 0)) {
+	if (day > months_duration[month - 1]) {
 		result = false;
 	}
 
