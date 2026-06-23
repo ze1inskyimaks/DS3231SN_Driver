@@ -1,10 +1,13 @@
 
 #include "ds_api.h"
 
+#define MEMADD_SIZE I2C_MEMADD_SIZE_8BIT
 #define TEMPERATURE_ADDRESS 0x11
+#define CONTROL_ADDRESS 0x0E
 #define START_TIME_ADDRESS 0x00
 #define TRIALS 5
 #define TIMEOUT 10
+#define CONTROL_EOSC_BIT (1 << 7)
 
 
 typedef struct{
@@ -37,6 +40,8 @@ static inline bool is_time_data_valid(const ds_time_data_t *const time_data);
  * @retval DS_API_STATUS_OK Driver initialized successfully.
  * @retval DS_API_STATUS_INVALID_PARAMETERS Invalid function parameters.
  * @retval DS_API_STATUS_DEVICE_NOT_FOUND Device is not responding.
+ * @retval DS_API_STATUS_READ_ERROR Read operation failed.
+ * @retval DS_API_STATUS_WRITE_ERROR Write operation failed.
  */
 ds_api_status_t ds_init(I2C_HandleTypeDef *hi2c, const uint8_t device_address){
 	ds_api_status_t status = DS_API_STATUS_OK;
@@ -56,9 +61,23 @@ ds_api_status_t ds_init(I2C_HandleTypeDef *hi2c, const uint8_t device_address){
 
 	if(DS_API_STATUS_OK == status)
 	{
-		ds_data.hi2c = hi2c;
-		ds_data.device_address = device_address;
-		ds_data.is_device_initialized = true;
+		uint8_t control_register = 0x00;
+		if(HAL_OK != HAL_I2C_Mem_Read(hi2c, device_address, CONTROL_ADDRESS, MEMADD_SIZE, &control_register, sizeof(control_register), HAL_MAX_DELAY)){
+			status = DS_API_STATUS_READ_ERROR;
+		}
+
+		if(DS_API_STATUS_OK == status && (control_register & CONTROL_EOSC_BIT)){
+			control_register &= ~CONTROL_EOSC_BIT; //0b01111111 | enable oscillator;
+			if(HAL_OK != HAL_I2C_Mem_Write(hi2c, device_address, CONTROL_ADDRESS, MEMADD_SIZE, &control_register, sizeof(control_register), HAL_MAX_DELAY)){
+				status = DS_API_STATUS_WRITE_ERROR;
+			}
+		}
+
+		if(DS_API_STATUS_OK == status){
+			ds_data.hi2c = hi2c;
+			ds_data.device_address = device_address;
+			ds_data.is_device_initialized = true;
+		}
 	}
 
 	return status;
@@ -94,7 +113,7 @@ ds_api_status_t ds_read_time(ds_time_data_t *const time_data){
 			ds_data.hi2c,
 			ds_data.device_address,
 			START_TIME_ADDRESS,
-			I2C_MEMADD_SIZE_8BIT,
+			MEMADD_SIZE,
 			buffer,
 			7,
 			HAL_MAX_DELAY);
@@ -192,7 +211,7 @@ ds_api_status_t ds_write_time(const ds_time_data_t *const time_data, const bool 
 				ds_data.hi2c,
 				ds_data.device_address,
 				START_TIME_ADDRESS,
-				I2C_MEMADD_SIZE_8BIT,
+				MEMADD_SIZE,
 				(uint8_t*)&write_data,
 				sizeof(write_data),
 				HAL_MAX_DELAY))
@@ -227,7 +246,7 @@ ds_api_status_t ds_read_temperature(ds_temperature_data_t *const temperature_dat
 	uint8_t buffer[2] = {0};
 
 	if (DS_API_STATUS_OK == status) {
-		if(HAL_OK != HAL_I2C_Mem_Read(ds_data.hi2c, ds_data.device_address, TEMPERATURE_ADDRESS, I2C_MEMADD_SIZE_8BIT,
+		if(HAL_OK != HAL_I2C_Mem_Read(ds_data.hi2c, ds_data.device_address, TEMPERATURE_ADDRESS, MEMADD_SIZE,
 				buffer, sizeof(buffer), HAL_MAX_DELAY)) {
 			status = DS_API_STATUS_READ_ERROR;
 		} else {
