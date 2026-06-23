@@ -32,15 +32,8 @@ typedef struct{
     uint16_t year;
 } ds_time_data_t;
 
-/**
- * @brief Temperature measurement data.
- */
-typedef struct{
-	float temperature;
-} ds_temperature_data_t;
-
 ds_api_status_t ds_init				(I2C_HandleTypeDef *hi2c, const uint8_t device_address);
 ds_api_status_t ds_read_time		(ds_time_data_t *const time_data);
 ds_api_status_t ds_write_time		(const ds_time_data_t *const time_data, const bool is_24_hour_format);
-ds_api_status_t ds_read_temperature	(ds_temperature_data_t *const temperature_data);
+ds_api_status_t ds_read_temperature	(int16_t *const temperature_x100);
 
