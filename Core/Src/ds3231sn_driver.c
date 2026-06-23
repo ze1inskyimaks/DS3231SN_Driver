@@ -36,11 +36,7 @@ static void convert_time_data_to_bcd(const ds_time_data_t *const orig_data,
  * @return true if pointer is valid, otherwise false.
  */
 static inline bool is_valid_parameters(void *data) {
-	bool retcode = true;
-	if (NULL == data) {
-		retcode = false;
-	}
-	return retcode;
+	return NULL != data;
 }
 
 /**
@@ -72,45 +68,11 @@ static inline bool is_device_initialized() {
  */
 static inline bool is_day_of_month_valid(uint8_t day, uint8_t month, uint16_t year) {
 	bool result = true;
+	const uint8_t months_duration[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+	const bool is_leap_year = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
 
-	switch(month) {
-		case 1:
-		case 3:
-		case 5:
-		case 7:
-		case 8:
-		case 10:
-		case 12:
-		{
-			if (day > 31) {
-				result = false;
-			}
-			break;
-		}
-
-		case 2: {
-			if ((year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)) {
-				if (day > 29) {
-					result = false;
-				}
-			} else {
-				if (day > 28) {
-					result = false;
-				}
-			}
-			break;
-		}
-
-		case 4:
-		case 6:
-		case 9:
-		case 11:
-		{
-			if (day > 30) {
-				result = false;
-			}
-			break;
-		}
+	if (day > months_duration[month - 1] + (2 == month && is_leap_year ? 1 : 0)) {
+		result = false;
 	}
 
 	return result;
@@ -124,11 +86,13 @@ static inline bool is_day_of_month_valid(uint8_t day, uint8_t month, uint16_t ye
  * @return true if all values are within valid ranges.
  */
 static inline bool is_time_data_valid(const ds_time_data_t *const time_data) {
-	bool result =  !(  time_data->seconds > 59
+	const bool result =  !(  time_data->seconds > 59
 					|| time_data->minutes > 59
 					|| time_data->hours > 23
 					|| time_data->day_of_week > 7
+					|| time_data->day_of_week < 1
 					|| time_data->month > 12
+					|| time_data->month < 1
 					|| time_data->year > 2199
 					|| time_data->year < 2000
 					|| !is_day_of_month_valid(time_data->day, time_data->month, time_data->year));
