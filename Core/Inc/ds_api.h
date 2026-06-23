@@ -5,17 +5,24 @@
 #include "main.h"
 
 /**
- * 	enum for status returns
+ * @brief Status codes returned by DS3231 driver operations.
  */
 typedef enum
 {
-	DS_API_STATUS_OK = 0,
-	DS_API_STATUS_NOT_INITIALIZED,
-	DS_API_STATUS_WRITE_ERROR,
-	DS_API_STATUS_READ_ERROR,
-	DS_API_STATUS_INVALID_PARAMETERS
+	DS_API_STATUS_OK = 0,               /** Operation completed successfully. */
+	DS_API_STATUS_NOT_INITIALIZED,      /** Driver is not initialized. */
+	DS_API_STATUS_DEVICE_NOT_FOUND,     /** Device is not responding on the I2C bus. */
+	DS_API_STATUS_WRITE_ERROR,          /** Write operation failed. */
+	DS_API_STATUS_READ_ERROR,           /** Read operation failed. */
+  DS_API_STATUS_OSCILLATOR_STOPPED,   /** Oscillator stopped. */
+	DS_API_STATUS_INVALID_PARAMETERS    /** Invalid function parameters. */
 } ds_api_status_t;
 
+/**
+ * @brief Time and date data structure.
+ *
+ * Stores date and time values in decimal format.
+ */
 typedef struct{
     uint8_t seconds;
     uint8_t minutes;
@@ -26,12 +33,8 @@ typedef struct{
     uint16_t year;
 } ds_time_data_t;
 
-typedef struct{
-	uint16_t temperature;
-} ds_temperature_data_t;
-
-ds_api_status_t ds_init				(I2C_HandleTypeDef *hi2c1, const uint8_t device_address);
+ds_api_status_t ds_init				(I2C_HandleTypeDef *hi2c, const uint8_t device_address);
 ds_api_status_t ds_read_time		(ds_time_data_t *const time_data);
-ds_api_status_t ds_write_time		(const ds_time_data_t *const time_data);
-ds_api_status_t ds_read_temperature	(ds_temperature_data_t *const temperature_data);
+ds_api_status_t ds_write_time		(const ds_time_data_t *const time_data, const bool is_24_hour_format);
+ds_api_status_t ds_read_temperature	(int16_t *const temperature_x100);
 

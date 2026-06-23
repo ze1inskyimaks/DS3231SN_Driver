@@ -90,8 +90,9 @@ int main(void)
   MX_GPIO_Init();
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
-  uint8_t buffer[1] = {0};
-  //HAL_I2C_Mem_Read(&hi2c1, 0x68 << 1, 0x00, I2C_MEMADD_SIZE_8BIT, buffer, sizeof(buffer), HAL_MAX_DELAY);
+  ds_init(&hi2c1, 0x68 << 1);
+  int16_t temperature_x100 = 0;
+  ds_time_data_t time_data= {0};
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -99,15 +100,9 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-	  ds_init(&hi2c1, 0x68 << 1);
-/*	  HAL_I2C_Mem_Read(&hi2c1, 0x68 << 1, 0x00, I2C_MEMADD_SIZE_8BIT, buffer, sizeof(buffer), HAL_MAX_DELAY);
-	  HAL_I2C_Mem_Read(&hi2c1, 0x68 << 1, 0x01, I2C_MEMADD_SIZE_8BIT, buffer, sizeof(buffer), HAL_MAX_DELAY);
-	  HAL_I2C_Mem_Read(&hi2c1, 0x68 << 1, 0x02, I2C_MEMADD_SIZE_8BIT, buffer, sizeof(buffer), HAL_MAX_DELAY);
-	  HAL_I2C_Mem_Read(&hi2c1, 0x68 << 1, 0x03, I2C_MEMADD_SIZE_8BIT, buffer, sizeof(buffer), HAL_MAX_DELAY);
-	  HAL_I2C_Mem_Read(&hi2c1, 0x68 << 1, 0x04, I2C_MEMADD_SIZE_8BIT, buffer, sizeof(buffer), HAL_MAX_DELAY);
-	  HAL_I2C_Mem_Read(&hi2c1, 0x68 << 1, 0x05, I2C_MEMADD_SIZE_8BIT, buffer, sizeof(buffer), HAL_MAX_DELAY);
-	  HAL_I2C_Mem_Read(&hi2c1, 0x68 << 1, 0x06, I2C_MEMADD_SIZE_8BIT, buffer, sizeof(buffer), HAL_MAX_DELAY);*/
-	  HAL_Delay(10000);
+	  ds_read_temperature(&temperature_x100);
+	  ds_read_time(&time_data);
+	  HAL_Delay(1000);
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
